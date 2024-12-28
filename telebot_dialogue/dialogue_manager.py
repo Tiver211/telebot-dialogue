@@ -258,6 +258,7 @@ class DialogueManager:
         dialogue = self.find_dialogue(user_id)
         if dialogue:
             dialogue.delete_dialogue()
+            del self.dialogues[user_id]
             return True
 
         return False
