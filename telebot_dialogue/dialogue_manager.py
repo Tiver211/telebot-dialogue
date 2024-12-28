@@ -54,6 +54,7 @@ class Dialogue:
         """
         Call the end function if it exists when the dialogue object is deleted.
         """
+        self.state = False
         if self.end_func:
             self.end_func(self)
 
@@ -256,7 +257,7 @@ class DialogueManager:
         """
         dialogue = self.find_dialogue(user_id)
         if dialogue:
-            del dialogue
+            dialogue.delete_dialogue()
             return True
 
         return False
