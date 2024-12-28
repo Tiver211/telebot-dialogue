@@ -2,6 +2,10 @@ from collections.abc import Callable
 
 
 class Dialogue:
+    """
+    A class representing a dialogue with a user.
+    """
+
     def __init__(
             self,
             user_id: int,
@@ -10,6 +14,17 @@ class Dialogue:
             end_func: Callable = None,
             pause_func: Callable = None,
             continue_func: Callable = None) -> None:
+        """
+        Initialize a new Dialogue instance.
+
+        Args:
+            user_id (int): The unique identifier for the user.
+            handler (Callable): The function to handle dialogue messages.
+            context (dict, optional): Initial context for the dialogue. Defaults to None.
+            end_func (Callable, optional): Function to call when the dialogue ends. Defaults to None.
+            pause_func (Callable, optional): Function to call when the dialogue is paused. Defaults to None.
+            continue_func (Callable, optional): Function to call when the dialogue is continued. Defaults to None.
+        """
         self.user_id = user_id
         self.handler = handler
         self.state = True
@@ -20,42 +35,98 @@ class Dialogue:
         self.continue_func = continue_func
 
     def stop_dialogue(self) -> None:
+        """
+        Stop the dialogue and call the pause function if it exists.
+        """
         self.state = False
         if self.pause_func:
             self.pause_func(self)
 
     def continue_dialogue(self) -> None:
+        """
+        Continue the dialogue and call the continue function if it exists.
+        """
         self.state = True
         if self.continue_func:
             self.continue_func(self)
 
     def __del__(self) -> None:
+        """
+        Call the end function if it exists when the dialogue object is deleted.
+        """
         if self.end_func:
             self.end_func(self)
 
     def update_context(self, key, value) -> None:
+        """
+        Update a key-value pair in the dialogue context.
+
+        Args:
+            key: The key to update or add to the context.
+            value: The value to associate with the key.
+        """
         self.context[key] = value
 
     def get_context(self, key, default=None) -> any:
+        """
+        Get a value from the dialogue context.
+
+        Args:
+            key: The key to retrieve from the context.
+            default: The default value to return if the key is not found.
+
+        Returns:
+            The value associated with the key, or the default value if not found.
+        """
         return self.context.get(key, default)
 
     def init_handler(self, message) -> None:
+        """
+        Initialize the message handler for a new message.
+
+        Args:
+            message: The message to handle.
+        """
         self.history.append(message)
         self.handler(message, self)
 
     def delete_dialogue(self):
+        """
+        Delete the dialogue by calling the destructor.
+        """
         self.__del__()
 
     def get_history(self) -> list:
+        """
+        Get the message history of the dialogue.
+
+        Returns:
+            A list containing the message history.
+        """
         return self.history
 
     def get_state(self) -> bool:
+        """
+        Get the current state of the dialogue.
+
+        Returns:
+            True if the dialogue is active, False otherwise.
+        """
         return self.state
 
     def clear_context(self):
+        """
+        Clear all key-value pairs from the dialogue context.
+        """
         self.context.clear()
 
     def serialize(self) -> dict:
+        """
+        Serialize the dialogue object to a dictionary.
+
+        Returns:
+            A dictionary representation of the dialogue object.
+        """
         return {
             "user_id": self.user_id,
             "state": self.state,
@@ -65,20 +136,34 @@ class Dialogue:
 
     @classmethod
     def deserialize(cls, data: dict) -> "Dialogue":
-        dialogue = cls(data["user_id"], lambda m, c: None)  # Здесь замените обработчик на нужный
+        """
+        Create a Dialogue instance from a serialized dictionary.
+
+        Args:
+            data (dict): A dictionary containing serialized dialogue data.
+
+        Returns:
+            A new Dialogue instance with the deserialized data.
+        """
+        dialogue = cls(data["user_id"], lambda m, c: None)  # Replace with appropriate handler
         dialogue.state = data["state"]
         dialogue.context = data["context"]
         dialogue.history = data["history"]
         return dialogue
 
     def clear_history(self):
+        """
+        Clear the message history of the dialogue.
+        """
         self.history = []
 
     def reset_dialogue(self):
+        """
+        Reset the dialogue to its initial state.
+        """
         self.state = True
         self.context.clear()
         self.history.clear()
-
 class DialogueManager:
     """
     A class to manage multiple dialogues with users.
@@ -186,17 +271,24 @@ class DialogueManager:
         def __exit__(self, exc_type, exc_val, exc_tb) -> None:
             pass
 
-    def update(self, user_id: int) -> DialogueUpdater:
+    def update(self, user_id: int) -> 'DialogueManager.DialogueUpdater':
+        """
+        Create a DialogueUpdater context manager for updating a dialogue.
+    
+        This method allows for safe updating of a dialogue within a context manager,
+        ensuring proper handling of the dialogue object.
+    
+        Args:
+            user_id (int): The ID of the user whose dialogue should be updated.
+    
+        Returns:
+            DialogueManager.DialogueUpdater: A context manager for updating the dialogue.
+            If no dialogue is found for the given user_id, the context manager will
+            contain None.
+    
+        Example:
+            with dialogue_manager.update(user_id) as dialogue:
+                if dialogue:
+                    dialogue.update_context('key', 'value')
+        """
         return self.DialogueUpdater(self.find_dialogue(user_id))
-
-
-
-
-dialogue_manager = DialogueManager()
-dialogue_manager.add_dialogue(Dialogue(123, lambda m, c: print(f"User 1: {m.text}")))
-print(dialogue_manager.find_dialogue(123).context)
-with dialogue_manager.update(123) as dialogue:
-    dialogue.update_context("key", "value")
-
-print(dialogue_manager.find_dialogue(123).context)
-
